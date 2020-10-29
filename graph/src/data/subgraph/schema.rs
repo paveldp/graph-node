@@ -20,7 +20,7 @@ use stable_hash::utils::stable_hash;
 use stable_hash::{crypto::SetHasher, SequenceNumber, StableHash, StableHasher};
 use std::str::FromStr;
 use std::{collections::BTreeMap, fmt::Display};
-use strum_macros::IntoStaticStr;
+use strum_macros::{EnumString, IntoStaticStr};
 use uuid::Uuid;
 use web3::types::*;
 
@@ -43,7 +43,7 @@ lazy_static! {
 pub const POI_TABLE: &str = "poi2$";
 pub const POI_OBJECT: &str = "Poi$";
 
-#[derive(Debug, Clone, IntoStaticStr)]
+#[derive(Debug, Clone, IntoStaticStr, EnumString)]
 pub enum MetadataType {
     Subgraph,
     SubgraphDeployment,
