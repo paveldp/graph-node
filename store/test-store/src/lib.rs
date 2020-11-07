@@ -451,11 +451,13 @@ fn execute_subgraph_query_internal(
     let logger = Logger::root(slog::Discard, o!());
     let query = return_err!(PreparedQuery::new(&logger, query, max_complexity, 100));
     let mut result = QueryResult::empty();
+    let deployment = query.schema.id().clone();
+    let store = STORE.clone().query_store(&deployment, false).unwrap();
     for (bc, selection_set) in return_err!(query.block_constraint()) {
         let logger = logger.clone();
         let resolver = return_err!(rt.block_on(StoreResolver::at_block(
             &logger,
-            STORE.clone().query_store(false),
+            store.clone(),
             bc,
             query.schema.id().clone()
         )));

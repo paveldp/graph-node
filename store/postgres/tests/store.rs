@@ -1770,7 +1770,7 @@ fn throttle_subscription_delivers() {
             subscribe_and_consume(store.clone(), &SUBGRAPHS_ID, "SubgraphDeployment")
                 .throttle_while_syncing(
                     &*LOGGER,
-                    store.clone().query_store(true),
+                    store.clone().query_store(&TEST_SUBGRAPH_ID, true).unwrap(),
                     SUBGRAPHS_ID.clone(),
                     Duration::from_millis(500),
                 );
@@ -1778,7 +1778,7 @@ fn throttle_subscription_delivers() {
         let subscription = subscribe_and_consume(store.clone(), &TEST_SUBGRAPH_ID, USER)
             .throttle_while_syncing(
                 &*LOGGER,
-                store.clone().query_store(true),
+                store.clone().query_store(&TEST_SUBGRAPH_ID, true).unwrap(),
                 TEST_SUBGRAPH_ID.clone(),
                 Duration::from_millis(500),
             );
@@ -1829,7 +1829,7 @@ fn throttle_subscription_throttles() {
             let subscription = subscribe_and_consume(store.clone(), &TEST_SUBGRAPH_ID, USER)
                 .throttle_while_syncing(
                     &*LOGGER,
-                    store.clone().query_store(true),
+                    store.clone().query_store(&TEST_SUBGRAPH_ID, true).unwrap(),
                     TEST_SUBGRAPH_ID.clone(),
                     Duration::from_secs(30),
                 );
