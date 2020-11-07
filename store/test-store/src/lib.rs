@@ -195,7 +195,7 @@ pub fn transact_entity_operations(
     subgraph_id: SubgraphDeploymentId,
     block_ptr_to: EthereumBlockPointer,
     ops: Vec<EntityOperation>,
-) -> Result<bool, StoreError> {
+) -> Result<(), StoreError> {
     let mut entity_cache = EntityCache::new(store.clone());
     entity_cache.append(ops)?;
     let mods = entity_cache

@@ -839,16 +839,9 @@ where
         .store
         .transact_block_operations(subgraph_id, block_ptr_after, mods, stopwatch)
     {
-        Ok(should_migrate) => {
+        Ok(_) => {
             let elapsed = start.elapsed().as_secs_f64();
             metrics.block_ops_transaction_duration.observe(elapsed);
-            if should_migrate {
-                ctx.inputs.store.migrate_subgraph_deployment(
-                    &logger,
-                    &ctx.inputs.deployment_id,
-                    &block_ptr_after,
-                );
-            }
             Ok((ctx, needs_restart))
         }
         Err(e) => {
