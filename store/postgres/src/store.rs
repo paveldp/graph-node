@@ -702,7 +702,7 @@ impl Store {
         };
 
         let graft_block =
-            metadata::deployment_graft(&conn, &subgraph_id)?.map(|(_, ptr)| ptr.number as i32);
+            metadata::graft_point(&conn, &subgraph_id)?.map(|(_, ptr)| ptr.number as i32);
 
         // Generate an API schema  for the subgraph and make sure all types in the
         // API schema have a @subgraphId directive as well
