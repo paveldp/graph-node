@@ -155,6 +155,7 @@ impl Store for MockStore {
         _: &Schema,
         _: SubgraphDeploymentEntity,
         _: NodeId,
+        _: String,
         _: SubgraphVersionSwitchingMode,
     ) -> Result<(), StoreError> {
         unimplemented!()
