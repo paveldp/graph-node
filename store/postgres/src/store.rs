@@ -21,7 +21,7 @@ use std::sync::{atomic::AtomicUsize, Arc, Mutex};
 use std::time::Instant;
 use tokio::sync::Semaphore;
 
-use graph::components::store::{EntityCollection, QueryStore, Store as StoreTrait};
+use graph::components::store::{EntityCollection, QueryStore};
 use graph::components::subgraph::ProofOfIndexingFinisher;
 use graph::data::subgraph::schema::{
     SubgraphDeploymentEntity, TypedEntity as _, POI_OBJECT, SUBGRAPHS_ID,
@@ -872,8 +872,10 @@ impl Store {
     }
 }
 
-impl StoreTrait for Store {
-    fn block_ptr(
+/// Methods that back the trait `graph::components::Store`, but have small
+/// variations in their signatures
+impl Store {
+    pub(crate) fn block_ptr(
         &self,
         subgraph_id: SubgraphDeploymentId,
     ) -> Result<Option<EthereumBlockPointer>, Error> {
@@ -885,7 +887,7 @@ impl StoreTrait for Store {
         )
     }
 
-    fn supports_proof_of_indexing<'a>(
+    pub(crate) fn supports_proof_of_indexing<'a>(
         self: Arc<Self>,
         subgraph_id: &'a SubgraphDeploymentId,
     ) -> DynTryFuture<'a, bool> {
@@ -896,7 +898,7 @@ impl StoreTrait for Store {
         .boxed()
     }
 
-    fn get_proof_of_indexing<'a>(
+    pub(crate) fn get_proof_of_indexing<'a>(
         self: Arc<Self>,
         subgraph_id: &'a SubgraphDeploymentId,
         indexer: &'a Option<Address>,
@@ -1010,14 +1012,14 @@ impl StoreTrait for Store {
         .boxed()
     }
 
-    fn get(&self, key: EntityKey) -> Result<Option<Entity>, QueryExecutionError> {
+    pub(crate) fn get(&self, key: EntityKey) -> Result<Option<Entity>, QueryExecutionError> {
         let conn = self
             .get_entity_conn(&key.subgraph_id, ReplicaId::Main)
             .map_err(|e| QueryExecutionError::StoreError(e.into()))?;
         self.get_entity(&conn, &key.subgraph_id, &key.entity_type, &key.entity_id)
     }
 
-    fn get_many(
+    pub(crate) fn get_many(
         &self,
         subgraph_id: &SubgraphDeploymentId,
         ids_for_type: BTreeMap<&str, Vec<&str>>,
@@ -1031,14 +1033,17 @@ impl StoreTrait for Store {
         conn.find_many(ids_for_type, BLOCK_NUMBER_MAX)
     }
 
-    fn find(&self, query: EntityQuery) -> Result<Vec<Entity>, QueryExecutionError> {
+    pub(crate) fn find(&self, query: EntityQuery) -> Result<Vec<Entity>, QueryExecutionError> {
         let conn = self
             .get_entity_conn(&query.subgraph_id, ReplicaId::Main)
             .map_err(|e| QueryExecutionError::StoreError(e.into()))?;
         self.execute_query(&conn, query)
     }
 
-    fn find_one(&self, mut query: EntityQuery) -> Result<Option<Entity>, QueryExecutionError> {
+    pub(crate) fn find_one(
+        &self,
+        mut query: EntityQuery,
+    ) -> Result<Option<Entity>, QueryExecutionError> {
         query.range = EntityRange::first(1);
 
         let conn = self
@@ -1052,7 +1057,7 @@ impl StoreTrait for Store {
         }
     }
 
-    fn find_ens_name(&self, hash: &str) -> Result<Option<String>, QueryExecutionError> {
+    pub(crate) fn find_ens_name(&self, hash: &str) -> Result<Option<String>, QueryExecutionError> {
         use crate::db_schema::ens_names as dsl;
 
         let conn = self
@@ -1071,7 +1076,7 @@ impl StoreTrait for Store {
             })
     }
 
-    fn transact_block_operations(
+    pub(crate) fn transact_block_operations(
         &self,
         subgraph_id: SubgraphDeploymentId,
         block_ptr_to: EthereumBlockPointer,
@@ -1131,7 +1136,7 @@ impl StoreTrait for Store {
 
     /// Apply a series of entity operations. Return `true` if the subgraph
     /// mentioned in `history_event` should have its schema migrated
-    fn apply_metadata_operations(
+    pub(crate) fn apply_metadata_operations(
         &self,
         _: &SubgraphDeploymentId,
         operations: Vec<MetadataOperation>,
@@ -1144,7 +1149,7 @@ impl StoreTrait for Store {
         econn.transaction(|| econn.send_store_event(&event))
     }
 
-    fn revert_block_operations(
+    pub(crate) fn revert_block_operations(
         &self,
         subgraph_id: SubgraphDeploymentId,
         block_ptr_from: EthereumBlockPointer,
@@ -1191,19 +1196,11 @@ impl StoreTrait for Store {
         })
     }
 
-    fn subscribe(&self, entities: Vec<SubgraphEntityPair>) -> StoreEventStreamBox {
+    pub(crate) fn subscribe(&self, entities: Vec<SubgraphEntityPair>) -> StoreEventStreamBox {
         self.subscriptions.subscribe(entities)
     }
 
-    fn deployment_state_from_name(
-        &self,
-        name: SubgraphName,
-    ) -> Result<DeploymentState, StoreError> {
-        let conn = self.get_conn()?;
-        metadata::deployment_state_from_name(&conn, name)
-    }
-
-    fn deployment_state_from_id(
+    pub(crate) fn deployment_state_from_id(
         &self,
         id: SubgraphDeploymentId,
     ) -> Result<DeploymentState, StoreError> {
@@ -1215,7 +1212,7 @@ impl StoreTrait for Store {
         }
     }
 
-    fn create_subgraph_deployment(
+    pub(crate) fn create_subgraph_deployment(
         &self,
         name: SubgraphName,
         schema: &Schema,
@@ -1228,12 +1225,12 @@ impl StoreTrait for Store {
         self.create_deployment_internal(name, shard, schema, deployment, node_id, mode, false)
     }
 
-    fn create_subgraph(&self, name: SubgraphName) -> Result<String, StoreError> {
+    pub(crate) fn create_subgraph(&self, name: SubgraphName) -> Result<String, StoreError> {
         let econn = self.get_entity_conn(&*SUBGRAPHS_ID, ReplicaId::Main)?;
         econn.transaction(|| metadata::create_subgraph(&econn.conn, &name))
     }
 
-    fn remove_subgraph(&self, name: SubgraphName) -> Result<(), StoreError> {
+    pub(crate) fn remove_subgraph(&self, name: SubgraphName) -> Result<(), StoreError> {
         let econn = self.get_entity_conn(&*SUBGRAPHS_ID, ReplicaId::Main)?;
         econn.transaction(|| -> Result<(), StoreError> {
             let changes = metadata::remove_subgraph(&econn.conn, name)?;
@@ -1242,7 +1239,7 @@ impl StoreTrait for Store {
         })
     }
 
-    fn reassign_subgraph(
+    pub(crate) fn reassign_subgraph(
         &self,
         id: &SubgraphDeploymentId,
         node: &NodeId,
@@ -1255,7 +1252,7 @@ impl StoreTrait for Store {
         })
     }
 
-    fn start_subgraph_deployment(
+    pub(crate) fn start_subgraph_deployment(
         &self,
         logger: &Logger,
         subgraph_id: &SubgraphDeploymentId,
@@ -1268,7 +1265,7 @@ impl StoreTrait for Store {
         })
     }
 
-    fn block_number(
+    pub(crate) fn block_number(
         &self,
         subgraph_id: &SubgraphDeploymentId,
         hash: H256,
@@ -1305,7 +1302,7 @@ impl StoreTrait for Store {
             .transpose()
     }
 
-    fn query_store(
+    pub(crate) fn query_store(
         self: Arc<Self>,
         _id: &SubgraphDeploymentId,
         for_subscription: bool,
@@ -1332,7 +1329,7 @@ impl StoreTrait for Store {
         )))
     }
 
-    fn deployment_synced(&self, id: &SubgraphDeploymentId) -> Result<(), Error> {
+    pub(crate) fn deployment_synced(&self, id: &SubgraphDeploymentId) -> Result<(), Error> {
         let econn = self.get_entity_conn(&*SUBGRAPHS_ID, ReplicaId::Main)?;
         econn.transaction(|| {
             let changes = metadata::deployment_synced(&econn.conn, id)?;
