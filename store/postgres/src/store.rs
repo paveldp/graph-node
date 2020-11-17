@@ -6,9 +6,7 @@ use diesel::{insert_into, update};
 use futures03::FutureExt as _;
 use graph::components::store::StoredDynamicDataSource;
 use graph::data::subgraph::status;
-use graph::prelude::{
-    CancelGuard, CancelHandle, CancelToken, CancelableError, NodeId, PoolWaitStats,
-};
+use graph::prelude::{CancelGuard, CancelHandle, CancelToken, CancelableError, PoolWaitStats};
 use lazy_static::lazy_static;
 use lru_time_cache::LruCache;
 use rand::{seq::SliceRandom, thread_rng};
@@ -31,7 +29,7 @@ use graph::prelude::{
     EntityModification, EntityOrder, EntityQuery, EntityRange, Error, EthereumBlockPointer,
     EthereumCallCache, Logger, MetadataOperation, MetricsRegistry, QueryExecutionError, Schema,
     StopwatchMetrics, StoreError, StoreEvent, StoreEventStreamBox, SubgraphDeploymentId,
-    SubgraphEntityPair, SubgraphName, TransactionAbortError, Value, BLOCK_NUMBER_MAX,
+    SubgraphEntityPair, TransactionAbortError, Value, BLOCK_NUMBER_MAX,
 };
 
 use graph_graphql::prelude::api_schema;
@@ -1113,31 +1111,6 @@ impl Store {
         }
     }
 
-    pub(crate) fn create_subgraph(&self, name: SubgraphName) -> Result<String, StoreError> {
-        let econn = self.get_entity_conn(&*SUBGRAPHS_ID, ReplicaId::Main)?;
-        econn.transaction(|| metadata::create_subgraph(&econn.conn, &name))
-    }
-
-    pub(crate) fn remove_subgraph(&self, name: SubgraphName) -> Result<StoreEvent, StoreError> {
-        let econn = self.get_entity_conn(&*SUBGRAPHS_ID, ReplicaId::Main)?;
-        econn.transaction(|| -> Result<_, StoreError> {
-            let changes = metadata::remove_subgraph(&econn.conn, name)?;
-            Ok(StoreEvent::new(changes))
-        })
-    }
-
-    pub(crate) fn reassign_subgraph(
-        &self,
-        id: &SubgraphDeploymentId,
-        node: &NodeId,
-    ) -> Result<StoreEvent, StoreError> {
-        let econn = self.get_entity_conn(&*SUBGRAPHS_ID, ReplicaId::Main)?;
-        econn.transaction(|| -> Result<_, StoreError> {
-            let changes = metadata::reassign_subgraph(&econn.conn, id, node)?;
-            Ok(StoreEvent::new(changes))
-        })
-    }
-
     pub(crate) fn start_subgraph_deployment(
         &self,
         logger: &Logger,
@@ -1213,14 +1186,6 @@ impl Store {
             for_subscription,
             replica_id,
         )))
-    }
-
-    pub(crate) fn deployment_synced(&self, id: &SubgraphDeploymentId) -> Result<StoreEvent, Error> {
-        let econn = self.get_entity_conn(&*SUBGRAPHS_ID, ReplicaId::Main)?;
-        econn.transaction(|| {
-            let changes = metadata::deployment_synced(&econn.conn, id)?;
-            Ok(StoreEvent::new(changes))
-        })
     }
 
     pub(crate) fn load_dynamic_data_sources(
