@@ -927,7 +927,7 @@ impl Graft {
             vec![SubgraphManifestValidationError::GraftBaseInvalid(msg)]
         }
 
-        match store.block_ptr(self.base.clone()) {
+        match store.block_ptr(&self.base) {
             Err(e) => gbi(e.to_string()),
             Ok(None) => gbi(format!(
                 "failed to graft onto `{}` since it has not processed any blocks",
