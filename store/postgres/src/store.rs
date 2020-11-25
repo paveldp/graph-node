@@ -22,16 +22,14 @@ use tokio::sync::Semaphore;
 
 use graph::components::store::{EntityCollection, QueryStore};
 use graph::components::subgraph::ProofOfIndexingFinisher;
-use graph::data::subgraph::schema::{
-    SubgraphDeploymentEntity, TypedEntity as _, POI_OBJECT, SUBGRAPHS_ID,
-};
+use graph::data::subgraph::schema::{POI_OBJECT, SUBGRAPHS_ID};
 use graph::prelude::{
     debug, ethabi, format_err, futures03, info, o, tiny_keccak, tokio, trace, web3, ApiSchema,
-    BigInt, BlockNumber, CheapClone, DeploymentState, DynTryFuture, Entity, EntityKey,
-    EntityModification, EntityOrder, EntityQuery, EntityRange, Error, EthereumBlockPointer,
-    EthereumCallCache, Logger, MetadataOperation, MetricsRegistry, QueryExecutionError, Schema,
-    StopwatchMetrics, StoreError, StoreEvent, StoreEventStreamBox, SubgraphDeploymentId,
-    SubgraphEntityPair, TransactionAbortError, Value, BLOCK_NUMBER_MAX,
+    BlockNumber, CheapClone, DeploymentState, DynTryFuture, Entity, EntityKey, EntityModification,
+    EntityOrder, EntityQuery, EntityRange, Error, EthereumBlockPointer, EthereumCallCache, Logger,
+    MetadataOperation, MetricsRegistry, QueryExecutionError, Schema, StopwatchMetrics, StoreError,
+    StoreEvent, StoreEventStreamBox, SubgraphDeploymentId, SubgraphEntityPair,
+    TransactionAbortError, Value, BLOCK_NUMBER_MAX,
 };
 
 use graph_graphql::prelude::api_schema;
@@ -739,38 +737,7 @@ impl Store {
         subgraph_id: &SubgraphDeploymentId,
         conn: &e::Connection,
     ) -> Result<Option<EthereumBlockPointer>, Error> {
-        let key = SubgraphDeploymentEntity::key(subgraph_id.clone());
-        let subgraph_entity = conn
-            .find_metadata(&key.entity_type, &key.entity_id)
-            .map_err(|e| format_err!("error reading subgraph entity: {}", e))?
-            .ok_or_else(|| {
-                format_err!(
-                    "could not read block ptr for non-existent subgraph {}",
-                    subgraph_id
-                )
-            })?;
-
-        let hash: Option<H256> = match subgraph_entity.get("latestEthereumBlockHash") {
-            None => None,
-            Some(value) => value.clone().try_into()?,
-        };
-
-        let number: Option<BigInt> = match subgraph_entity.get("latestEthereumBlockNumber") {
-            None => None,
-            Some(value) => value.clone().try_into()?,
-        };
-
-        match (hash, number) {
-            (Some(hash), Some(number)) => Ok(Some(EthereumBlockPointer {
-                hash,
-                number: number.to_u64(),
-            })),
-            (None, None) => Ok(None),
-            _ => Err(format_err!(
-                "Ethereum block pointer has invalid `latestEthereumBlockHash` \
-                 or `latestEthereumBlockNumber`"
-            )),
-        }
+        Ok(deployment::block_ptr(&conn.conn, subgraph_id)?)
     }
 
     pub(crate) fn deployment_statuses(
@@ -1190,6 +1157,11 @@ impl Store {
     ) -> Result<Vec<StoredDynamicDataSource>, StoreError> {
         let conn = self.get_conn()?;
         conn.transaction(|| crate::dynds::load(&conn, id.as_str()))
+    }
+
+    pub(crate) fn exists_and_synced(&self, id: &SubgraphDeploymentId) -> Result<bool, StoreError> {
+        let conn = self.get_conn()?;
+        conn.transaction(|| deployment::exists_and_synced(&conn, id))
     }
 }
 

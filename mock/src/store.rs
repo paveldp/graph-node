@@ -2,9 +2,9 @@ use mockall::predicate::*;
 use mockall::*;
 use std::collections::BTreeMap;
 
-use graph::components::store::StoredDynamicDataSource;
 use graph::data::subgraph::status;
 use graph::prelude::*;
+use graph::{components::store::StoredDynamicDataSource, data::subgraph::schema::MetadataType};
 use graph_graphql::prelude::api_schema;
 use web3::types::{Address, H256};
 
@@ -211,6 +211,10 @@ impl Store for MockStore {
     ) -> Result<Vec<StoredDynamicDataSource>, StoreError> {
         unimplemented!()
     }
+
+    fn assigned_node(&self, _: &SubgraphDeploymentId) -> Result<Option<NodeId>, StoreError> {
+        unimplemented!()
+    }
 }
 
 pub fn mock_store_with_users_subgraph() -> (Arc<MockStore>, SubgraphDeploymentId) {
@@ -225,7 +229,9 @@ pub fn mock_store_with_users_subgraph() -> (Arc<MockStore>, SubgraphDeploymentId
     store
         .expect_get_mock()
         .withf(move |key| {
-            key == &SubgraphDeploymentEntity::key(subgraph_id_for_deployment_entity.clone())
+            key.subgraph_id.is_meta()
+                && key.entity_type.as_str() == MetadataType::SubgraphDeployment.as_str()
+                && key.entity_id.as_str() == subgraph_id_for_deployment_entity.as_str()
         })
         .returning(|_| Ok(Some(Entity::from(vec![]))));
 

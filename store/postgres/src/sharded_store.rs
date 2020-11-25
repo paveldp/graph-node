@@ -623,6 +623,11 @@ impl StoreTrait for ShardedStore {
         let (store, _) = self.store(id)?;
         store.load_dynamic_data_sources(id)
     }
+
+    fn assigned_node(&self, id: &SubgraphDeploymentId) -> Result<Option<NodeId>, StoreError> {
+        let primary = self.primary_conn()?;
+        primary.assigned_node(id)
+    }
 }
 
 /// Methods similar to those for SubgraphDeploymentStore

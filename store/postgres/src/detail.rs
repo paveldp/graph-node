@@ -96,7 +96,7 @@ struct ErrorDetail {
 
 struct DetailAndError(Detail, Option<ErrorDetail>);
 
-fn block(
+pub(crate) fn block(
     id: &str,
     name: &str,
     hash: Option<Vec<u8>>,

@@ -53,15 +53,8 @@ impl QueryStoreTrait for QueryStore {
     /// Return true if the deployment with the given id is fully synced,
     /// and return false otherwise. Errors from the store are passed back up
     fn is_deployment_synced(&self, id: SubgraphDeploymentId) -> Result<bool, Error> {
-        let entity = self
-            .store
-            .get(&self.site, SubgraphDeploymentEntity::key(id))?;
-        entity
-            .map(|entity| match entity.get("synced") {
-                Some(Value::Bool(true)) => Ok(true),
-                _ => Ok(false),
-            })
-            .unwrap_or(Ok(false))
+        assert_eq!(&self.site.deployment, &id);
+        Ok(self.store.exists_and_synced(&id)?)
     }
 
     fn block_ptr(

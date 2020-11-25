@@ -899,10 +899,7 @@ pub trait Store: Send + Sync + 'static {
             return Ok(true);
         }
 
-        // Check store for a deployment entity for this subgraph ID
-        self.get(SubgraphDeploymentEntity::key(id.to_owned()))
-            .map_err(|e| format_err!("Failed to query SubgraphDeployment entities: {}", e))
-            .map(|entity_opt| entity_opt.is_some())
+        self.block_ptr(id).map(|ptr| ptr.is_some())
     }
 
     /// The deployment `id` finished syncing, mark it as synced in the database
@@ -982,6 +979,11 @@ pub trait Store: Send + Sync + 'static {
         &self,
         subgraph_id: &SubgraphDeploymentId,
     ) -> Result<Vec<StoredDynamicDataSource>, StoreError>;
+
+    fn assigned_node(
+        &self,
+        subgraph_id: &SubgraphDeploymentId,
+    ) -> Result<Option<NodeId>, StoreError>;
 }
 
 mock! {
@@ -1149,6 +1151,10 @@ impl Store for MockStore {
         &self,
         _subgraph_id: &SubgraphDeploymentId,
     ) -> Result<Vec<StoredDynamicDataSource>, StoreError> {
+        unimplemented!()
+    }
+
+    fn assigned_node(&self, _: &SubgraphDeploymentId) -> Result<Option<NodeId>, StoreError> {
         unimplemented!()
     }
 }

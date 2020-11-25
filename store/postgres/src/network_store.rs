@@ -234,6 +234,10 @@ impl StoreTrait for NetworkStore {
     ) -> Result<Vec<StoredDynamicDataSource>, StoreError> {
         self.store.load_dynamic_data_sources(subgraph_id)
     }
+
+    fn assigned_node(&self, id: &SubgraphDeploymentId) -> Result<Option<NodeId>, StoreError> {
+        self.store.assigned_node(id)
+    }
 }
 
 impl SubgraphDeploymentStore for NetworkStore {
