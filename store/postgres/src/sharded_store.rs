@@ -685,7 +685,7 @@ impl ShardData for MetadataType {
         use MetadataType::*;
 
         match self {
-            Subgraph | SubgraphDeploymentAssignment => false,
+            SubgraphDeploymentAssignment => false,
             SubgraphDeployment
             | SubgraphManifest
             | EthereumContractDataSource
