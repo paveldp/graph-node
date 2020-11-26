@@ -5,9 +5,12 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::time::Instant;
 
-use graph::components::ethereum::{triggers_in_block, EthereumNetworks};
 use graph::components::store::ModificationsAndCache;
 use graph::components::subgraph::{MappingError, ProofOfIndexing, SharedProofOfIndexing};
+use graph::components::{
+    ethereum::{triggers_in_block, EthereumNetworks},
+    store::EntityType,
+};
 use graph::data::store::scalar::Bytes;
 use graph::data::subgraph::schema::{
     DynamicEthereumContractDataSourceEntity, SubgraphError, POI_OBJECT,
@@ -866,7 +869,7 @@ async fn update_proof_of_indexing(
         // Create the special POI entity key specific to this causality_region
         let entity_key = EntityKey {
             subgraph_id: deployment_id.clone(),
-            entity_type: POI_OBJECT.to_owned(),
+            entity_type: EntityType::data(POI_OBJECT.to_owned()),
             entity_id: causality_region,
         };
 
@@ -1023,7 +1026,7 @@ where
             &block_ptr,
         ));
         let id = DynamicEthereumContractDataSourceEntity::make_id();
-        let operations = entity.write_entity_operations(id.as_ref());
+        let operations = entity.write_entity_operations(&ctx.inputs.deployment_id, id.as_ref());
         entity_cache.append(operations)?;
     }
 

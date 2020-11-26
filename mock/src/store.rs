@@ -2,8 +2,8 @@ use mockall::predicate::*;
 use mockall::*;
 use std::collections::BTreeMap;
 
-use graph::data::subgraph::status;
 use graph::prelude::*;
+use graph::{components::store::EntityType, data::subgraph::status};
 use graph::{components::store::StoredDynamicDataSource, data::subgraph::schema::MetadataType};
 use graph_graphql::prelude::api_schema;
 use web3::types::{Address, H256};
@@ -69,8 +69,8 @@ impl Store for MockStore {
     fn get_many(
         &self,
         _subgraph_id: &SubgraphDeploymentId,
-        _ids_for_type: BTreeMap<&str, Vec<&str>>,
-    ) -> Result<BTreeMap<String, Vec<Entity>>, StoreError> {
+        _ids_for_type: BTreeMap<&EntityType, Vec<&str>>,
+    ) -> Result<BTreeMap<EntityType, Vec<Entity>>, StoreError> {
         unimplemented!()
     }
 
@@ -233,8 +233,7 @@ pub fn mock_store_with_users_subgraph() -> (Arc<MockStore>, SubgraphDeploymentId
     store
         .expect_get_mock()
         .withf(move |key| {
-            key.subgraph_id.is_meta()
-                && key.entity_type.as_str() == MetadataType::SubgraphDeployment.as_str()
+            key.entity_type == MetadataType::SubgraphDeployment.into()
                 && key.entity_id.as_str() == subgraph_id_for_deployment_entity.as_str()
         })
         .returning(|_| Ok(Some(Entity::from(vec![]))));

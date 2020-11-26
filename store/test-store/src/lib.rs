@@ -3,6 +3,7 @@ extern crate diesel;
 
 use crate::tokio::runtime::{Builder, Runtime};
 use diesel::PgConnection;
+use graph::components::store::EntityType;
 use graph::data::graphql::effort::LoadManager;
 use graph::log;
 use graph::prelude::{Store as _, *};
@@ -208,7 +209,7 @@ pub fn insert_ens_name(hash: &str, name: &str) {
 
 pub fn insert_entities(
     subgraph_id: SubgraphDeploymentId,
-    entities: Vec<(&str, Entity)>,
+    entities: Vec<(EntityType, Entity)>,
 ) -> Result<(), StoreError> {
     let insert_ops = entities
         .into_iter()
