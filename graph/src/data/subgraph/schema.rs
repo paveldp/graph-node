@@ -30,7 +30,7 @@ use crate::components::store::{
     EntityCollection, EntityKey, EntityOperation, EntityQuery, EntityRange, MetadataOperation,
 };
 use crate::data::graphql::{TryFromValue, ValueMap};
-use crate::data::store::{Entity, NodeId, SubgraphEntityPair, Value};
+use crate::data::store::{Entity, NodeId, SubscriptionFilter, Value};
 use crate::data::subgraph::SubgraphManifest;
 use crate::prelude::*;
 
@@ -98,7 +98,7 @@ pub trait TypedEntity {
         .range(range)
     }
 
-    fn subgraph_entity_pair() -> SubgraphEntityPair {
+    fn subgraph_entity_pair() -> SubscriptionFilter {
         (SUBGRAPHS_ID.clone(), Self::TYPENAME.to_string())
     }
 }

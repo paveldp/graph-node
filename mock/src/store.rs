@@ -129,7 +129,7 @@ impl Store for MockStore {
         unimplemented!()
     }
 
-    fn subscribe(&self, _entities: Vec<SubgraphEntityPair>) -> StoreEventStreamBox {
+    fn subscribe(&self, _entities: Vec<SubscriptionFilter>) -> StoreEventStreamBox {
         unimplemented!()
     }
 

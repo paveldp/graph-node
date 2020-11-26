@@ -28,7 +28,7 @@ use graph::prelude::{
     BlockNumber, CheapClone, DeploymentState, DynTryFuture, Entity, EntityKey, EntityModification,
     EntityOrder, EntityQuery, EntityRange, Error, EthereumBlockPointer, EthereumCallCache, Logger,
     MetadataOperation, MetricsRegistry, QueryExecutionError, Schema, StopwatchMetrics, StoreError,
-    StoreEvent, StoreEventStreamBox, SubgraphDeploymentId, SubgraphEntityPair,
+    StoreEvent, StoreEventStreamBox, SubgraphDeploymentId, SubscriptionFilter,
     TransactionAbortError, Value, BLOCK_NUMBER_MAX,
 };
 
@@ -1070,7 +1070,7 @@ impl Store {
         Ok(event)
     }
 
-    pub(crate) fn subscribe(&self, entities: Vec<SubgraphEntityPair>) -> StoreEventStreamBox {
+    pub(crate) fn subscribe(&self, entities: Vec<SubscriptionFilter>) -> StoreEventStreamBox {
         self.subscriptions.subscribe(entities)
     }
 
