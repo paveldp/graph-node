@@ -451,7 +451,10 @@ pub fn unfail(conn: &PgConnection, id: &SubgraphDeploymentId) -> Result<(), Stor
 /// and can not be reversed. It does not remove any of the metadata in
 /// `subgraphs.entities` associated with the subgraph
 #[cfg(debug_assertions)]
-pub fn drop_entities(conn: &diesel::pg::PgConnection, namespace: &str) -> Result<(), StoreError> {
+pub fn drop_entities(
+    conn: &diesel::pg::PgConnection,
+    namespace: &crate::primary::Namespace,
+) -> Result<(), StoreError> {
     use diesel::connection::SimpleConnection;
 
     let query = format!("drop schema if exists {} cascade", namespace);
