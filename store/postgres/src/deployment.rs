@@ -12,6 +12,8 @@ use graph::prelude::{
 };
 use std::convert::TryFrom;
 
+use graph::constraint_violation;
+
 // Diesel tables for some of the metadata
 // See also: ed42d219c6704a4aab57ce1ea66698e7
 // Changes to the GraphQL schema might require changes to these tables.
@@ -290,18 +292,15 @@ pub fn block_ptr(
 
 fn convert_to_u32(number: Option<i32>, field: &str, subgraph: &str) -> Result<u32, StoreError> {
     number
-        .ok_or_else(|| {
-            StoreError::ConstraintViolation(format!(
-                "missing {} for subgraph `{}`",
-                field, subgraph
-            ))
-        })
+        .ok_or_else(|| constraint_violation!("missing {} for subgraph `{}`", field, subgraph))
         .and_then(|number| {
             u32::try_from(number).map_err(|_| {
-                StoreError::ConstraintViolation(format!(
+                constraint_violation!(
                     "invalid value {:?} for {} in subgraph {}",
-                    number, field, subgraph
-                ))
+                    number,
+                    field,
+                    subgraph
+                )
             })
         })
 }
@@ -319,12 +318,13 @@ fn latest_as_block_number(
             subgraph
         ))),
         Some(latest) => latest.to_i32().ok_or_else(|| {
-            StoreError::ConstraintViolation(format!(
+            constraint_violation!(
                 "Subgraph `{}` has an \
                  invalid latest_ethereum_block_number `{:?}` that can not be \
                  represented as an i32",
-                subgraph, latest
-            ))
+                subgraph,
+                latest
+            )
         }),
     }
 }
