@@ -156,10 +156,7 @@ where
                 deterministic: false,
             };
 
-            let _ignore_error = store.apply_metadata_operations(
-                &subgraph_id,
-                SubgraphDeploymentEntity::fail_operations(&subgraph_id, error),
-            );
+            let _ignore_error = store.fail_deployment(&subgraph_id, error);
             e
         })
         .await

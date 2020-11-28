@@ -4,12 +4,13 @@
 use diesel::dsl::{sql, update};
 use diesel::pg::PgConnection;
 use diesel::prelude::{ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
-use graph::data::subgraph::schema::{MetadataType, SubgraphManifestEntity};
+use graph::data::subgraph::schema::{MetadataType, SubgraphError, SubgraphManifestEntity};
 use graph::prelude::{
-    bigdecimal::ToPrimitive, format_err, web3::types::H256, BigDecimal, BlockNumber,
+    bigdecimal::ToPrimitive, format_err, hex, web3::types::H256, BigDecimal, BlockNumber,
     DeploymentState, EntityChange, EntityChangeOperation, EthereumBlockPointer, Schema, StoreError,
     StoreEvent, SubgraphDeploymentId,
 };
+use stable_hash::{crypto::SetHasher, utils::stable_hash};
 use std::convert::TryFrom;
 
 use graph::constraint_violation;
@@ -396,6 +397,50 @@ pub fn exists_and_synced(conn: &PgConnection, id: &str) -> Result<bool, StoreErr
         .optional()?
         .unwrap_or(false);
     Ok(synced)
+}
+
+pub fn fail(
+    conn: &PgConnection,
+    id: &SubgraphDeploymentId,
+    error: SubgraphError,
+) -> Result<(), StoreError> {
+    use subgraph_deployment as d;
+    use subgraph_error as e;
+
+    let error_id = hex::encode(&stable_hash::<SetHasher, _>(&error));
+
+    let block_number = match error.block_ptr {
+        Some(ptr) => format!("{}::numeric", ptr.number),
+        None => "null".to_string(),
+    };
+
+    // We hash the entire error into the id, so if that error already exists
+    // we don't do anything
+    diesel::insert_into(e::table)
+        .values((
+            e::id.eq(&error_id),
+            e::subgraph_id.eq(error.subgraph_id.as_str()),
+            e::message.eq(&error.message),
+            e::block_number.eq(sql(&block_number)),
+            e::block_hash.eq(&error
+                .block_ptr
+                .map(|ptr| Vec::from(ptr.hash.to_fixed_bytes()))),
+            e::handler.eq(&error.handler),
+            e::deterministic.eq(&error.deterministic),
+        ))
+        .on_conflict(e::id)
+        .do_nothing()
+        .execute(conn)?;
+
+    update(d::table.filter(d::id.eq(id.as_str())))
+        .set((
+            d::failed.eq(true),
+            d::health.eq(SubgraphHealth::Failed),
+            d::fatal_error.eq(&error_id),
+        ))
+        .execute(conn)?;
+
+    Ok(())
 }
 
 /// Clear the `SubgraphHealth::Failed` status of a subgraph and mark it as

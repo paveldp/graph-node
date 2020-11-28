@@ -15,8 +15,7 @@ use graphql_parser::query as q;
 use hex;
 use rand::rngs::OsRng;
 use rand::Rng;
-use stable_hash::utils::stable_hash;
-use stable_hash::{crypto::SetHasher, SequenceNumber, StableHash, StableHasher};
+use stable_hash::{SequenceNumber, StableHash, StableHasher};
 use std::str::FromStr;
 use std::{collections::BTreeMap, fmt::Display};
 use strum_macros::{EnumString, IntoStaticStr};
@@ -328,23 +327,6 @@ impl SubgraphDeploymentEntity {
         ));
 
         ops
-    }
-
-    pub fn fail_operations(
-        id: &SubgraphDeploymentId,
-        error: SubgraphError,
-    ) -> Vec<MetadataOperation> {
-        let error_id = hex::encode(&stable_hash::<SetHasher, _>(&error));
-
-        let mut entity = Entity::new();
-        entity.set("failed", true);
-        entity.set("health", SubgraphHealth::Failed);
-        entity.set("fatalError", error_id.clone());
-
-        vec![
-            error.create_operation(id.clone(), error_id),
-            update_metadata_operation(id.clone(), Self::TYPENAME, id.as_str(), entity),
-        ]
     }
 }
 
@@ -1186,18 +1168,6 @@ fn set_metadata_operation(
     }
 }
 
-fn update_metadata_operation(
-    subgraph: SubgraphDeploymentId,
-    entity: MetadataType,
-    entity_id: impl Into<String>,
-    data: impl Into<Entity>,
-) -> MetadataOperation {
-    MetadataOperation::Update {
-        key: entity.key(subgraph, entity_id.into()),
-        data: data.into(),
-    }
-}
-
 #[derive(Debug)]
 pub struct SubgraphError {
     pub subgraph_id: SubgraphDeploymentId,
@@ -1223,60 +1193,6 @@ impl StableHash for SubgraphError {
         block_ptr.stable_hash(sequence_number.next_child(), state);
         handler.stable_hash(sequence_number.next_child(), state);
         deterministic.stable_hash(sequence_number.next_child(), state);
-    }
-}
-
-impl TypedEntity for SubgraphError {
-    const TYPENAME: MetadataType = MetadataType::SubgraphError;
-    type IdType = String;
-}
-
-impl SubgraphError {
-    fn create_operation(self, subgraph: SubgraphDeploymentId, id: String) -> MetadataOperation {
-        let mut entity = Entity::from(self);
-        entity.set("id", id.clone());
-        set_metadata_operation(subgraph, Self::TYPENAME, id, entity)
-    }
-}
-
-impl From<SubgraphError> for Entity {
-    fn from(subgraph_error: SubgraphError) -> Entity {
-        let SubgraphError {
-            subgraph_id,
-            message,
-            block_ptr,
-            handler,
-            deterministic,
-        } = subgraph_error;
-
-        let mut entity = Entity::new();
-        entity.set("subgraphId", subgraph_id.to_string());
-        entity.set("message", message);
-        entity.set("blockNumber", block_ptr.map(|x| x.number));
-        entity.set("blockHash", block_ptr.map(|x| x.hash));
-        entity.set("handler", handler);
-        entity.set("deterministic", deterministic);
-        entity
-    }
-}
-
-impl TryFromValue for SubgraphError {
-    fn try_from_value(value: &q::Value) -> Result<SubgraphError, Error> {
-        let block_number = value.get_optional("blockNumber")?;
-        let block_hash = value.get_optional("blockHash")?;
-
-        let block_ptr = match (block_number, block_hash) {
-            (Some(number), Some(hash)) => Some(EthereumBlockPointer { number, hash }),
-            _ => None,
-        };
-
-        Ok(SubgraphError {
-            subgraph_id: value.get_required("subgraphId")?,
-            message: value.get_required("message")?,
-            block_ptr,
-            handler: value.get_optional("handler")?,
-            deterministic: value.get_optional("deterministic")?.unwrap_or(false),
-        })
     }
 }
 

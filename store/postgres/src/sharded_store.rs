@@ -7,7 +7,7 @@ use graph::{
     components::store::{self, EntityType},
     constraint_violation,
     data::subgraph::schema::MetadataType,
-    data::subgraph::status,
+    data::subgraph::{schema::SubgraphError, status},
     prelude::{
         lazy_static,
         web3::types::{Address, H256},
@@ -486,6 +486,16 @@ impl StoreTrait for ShardedStore {
         })?;
         dconn.transaction(|| deployment::set_synced(&dconn, id))?;
         Ok(pconn.send_store_event(&event)?)
+    }
+
+    fn fail_deployment(
+        &self,
+        id: &SubgraphDeploymentId,
+        error: SubgraphError,
+    ) -> Result<(), StoreError> {
+        let (store, _) = self.store(id)?;
+        let conn = store.get_conn()?;
+        deployment::fail(&conn, id, error)
     }
 
     // FIXME: This method should not get a node_id

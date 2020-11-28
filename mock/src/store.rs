@@ -2,9 +2,9 @@ use mockall::predicate::*;
 use mockall::*;
 use std::collections::BTreeMap;
 
-use graph::prelude::*;
 use graph::{components::store::EntityType, data::subgraph::status};
 use graph::{components::store::StoredDynamicDataSource, data::subgraph::schema::MetadataType};
+use graph::{data::subgraph::schema::SubgraphError, prelude::*};
 use graph_graphql::prelude::api_schema;
 use web3::types::{Address, H256};
 
@@ -217,6 +217,14 @@ impl Store for MockStore {
     }
 
     fn assignments(&self, _: &NodeId) -> Result<Vec<SubgraphDeploymentId>, StoreError> {
+        unimplemented!()
+    }
+
+    fn fail_deployment(
+        &self,
+        _: &SubgraphDeploymentId,
+        _: SubgraphError,
+    ) -> Result<(), StoreError> {
         unimplemented!()
     }
 }

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use graph::{
     components::store::{EntityType, StoredDynamicDataSource},
-    data::subgraph::status,
+    data::subgraph::{schema::SubgraphError, status},
     prelude::{
         ethabi,
         web3::types::{Address, H256},
@@ -241,6 +241,14 @@ impl StoreTrait for NetworkStore {
 
     fn assignments(&self, node: &NodeId) -> Result<Vec<SubgraphDeploymentId>, StoreError> {
         self.store.assignments(node)
+    }
+
+    fn fail_deployment(
+        &self,
+        id: &SubgraphDeploymentId,
+        error: SubgraphError,
+    ) -> Result<(), StoreError> {
+        self.store.fail_deployment(id, error)
     }
 }
 
