@@ -17,11 +17,11 @@ use crate::{chain_store::ChainStore, query_store::QueryStore, ShardedStore};
 
 pub struct NetworkStore {
     store: Arc<ShardedStore>,
-    chain_store: ChainStore,
+    chain_store: Arc<ChainStore>,
 }
 
 impl NetworkStore {
-    pub fn new(store: Arc<ShardedStore>, chain_store: ChainStore) -> Self {
+    pub fn new(store: Arc<ShardedStore>, chain_store: Arc<ChainStore>) -> Self {
         Self { store, chain_store }
     }
 
@@ -188,14 +188,6 @@ impl StoreTrait for NetworkStore {
         self.store.start_subgraph_deployment(logger, subgraph_id)
     }
 
-    fn block_number(
-        &self,
-        subgraph_id: &graph::prelude::SubgraphDeploymentId,
-        block_hash: H256,
-    ) -> Result<Option<BlockNumber>, graph::prelude::StoreError> {
-        self.store.block_number(subgraph_id, block_hash)
-    }
-
     fn deployment_synced(&self, id: &graph::prelude::SubgraphDeploymentId) -> Result<(), Error> {
         self.store.deployment_synced(id)
     }
@@ -279,6 +271,7 @@ impl QueryStoreManager for NetworkStore {
         let (store, site, replica) = self.store.replica_for_query(target, for_subscription)?;
         Ok(Arc::new(QueryStore::new(
             store,
+            self.chain_store.clone(),
             for_subscription,
             site,
             replica,
@@ -366,5 +359,9 @@ impl ChainStoreTrait for NetworkStore {
 
     fn confirm_block_hash(&self, number: u64, hash: &H256) -> Result<usize, failure::Error> {
         self.chain_store.confirm_block_hash(number, hash)
+    }
+
+    fn block_number(&self, block_hash: H256) -> Result<Option<(String, BlockNumber)>, StoreError> {
+        self.chain_store.block_number(block_hash)
     }
 }

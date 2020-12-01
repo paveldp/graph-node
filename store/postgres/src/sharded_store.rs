@@ -14,12 +14,11 @@ use graph::{
     prelude::{
         lazy_static,
         web3::types::{Address, H256},
-        ApiSchema, BlockNumber, DeploymentState, DynTryFuture, Entity, EntityKey,
-        EntityModification, EntityQuery, Error, EthereumBlockPointer, EthereumCallCache, Logger,
-        MetadataOperation, NodeId, QueryExecutionError, Schema, StopwatchMetrics,
-        Store as StoreTrait, StoreError, StoreEvent, StoreEventStreamBox, SubgraphDeploymentEntity,
-        SubgraphDeploymentId, SubgraphDeploymentStore, SubgraphName, SubgraphVersionSwitchingMode,
-        SubscriptionFilter,
+        ApiSchema, DeploymentState, DynTryFuture, Entity, EntityKey, EntityModification,
+        EntityQuery, Error, EthereumBlockPointer, EthereumCallCache, Logger, MetadataOperation,
+        NodeId, QueryExecutionError, Schema, StopwatchMetrics, Store as StoreTrait, StoreError,
+        StoreEvent, StoreEventStreamBox, SubgraphDeploymentEntity, SubgraphDeploymentId,
+        SubgraphDeploymentStore, SubgraphName, SubgraphVersionSwitchingMode, SubscriptionFilter,
     },
 };
 use store::StoredDynamicDataSource;
@@ -478,15 +477,6 @@ impl StoreTrait for ShardedStore {
             deployment::unfail(&econn.conn, &site.deployment)?;
             econn.start_subgraph(logger, graft_base)
         })
-    }
-
-    fn block_number(
-        &self,
-        id: &SubgraphDeploymentId,
-        block_hash: H256,
-    ) -> Result<Option<BlockNumber>, StoreError> {
-        let (store, _) = self.store(&id)?;
-        store.block_number(id, block_hash)
     }
 
     fn deployment_synced(&self, id: &SubgraphDeploymentId) -> Result<(), Error> {
