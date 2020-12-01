@@ -1,9 +1,8 @@
 use futures::prelude::*;
 
-use crate::data::graphql::effort::LoadManager;
-use crate::data::query::{CacheStatus, Query, QueryResult};
-use crate::data::subgraph::DeploymentState;
+use crate::data::query::{CacheStatus, Query, QueryResult, QueryTarget};
 use crate::data::subscription::{Subscription, SubscriptionError, SubscriptionResult};
+use crate::{data::graphql::effort::LoadManager, prelude::SubgraphDeploymentId};
 
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -13,6 +12,11 @@ use std::time::Duration;
 pub type SubscriptionResultFuture =
     Box<dyn Future<Item = SubscriptionResult, Error = SubscriptionError> + Send>;
 
+pub enum GraphQlTarget {
+    SubgraphName(String),
+    Deployment(SubgraphDeploymentId),
+}
+
 /// A component that can run GraphqL queries against a [Store](../store/trait.Store.html).
 #[async_trait]
 pub trait GraphQlRunner: Send + Sync + 'static {
@@ -20,7 +24,7 @@ pub trait GraphQlRunner: Send + Sync + 'static {
     async fn run_query(
         self: Arc<Self>,
         query: Query,
-        state: DeploymentState,
+        target: QueryTarget,
         nested_resolver: bool,
     ) -> Arc<QueryResult>;
 
@@ -28,7 +32,7 @@ pub trait GraphQlRunner: Send + Sync + 'static {
     async fn run_query_with_complexity(
         self: Arc<Self>,
         query: Query,
-        state: DeploymentState,
+        target: QueryTarget,
         max_complexity: Option<u64>,
         max_depth: Option<u8>,
         max_first: Option<u32>,
@@ -40,6 +44,7 @@ pub trait GraphQlRunner: Send + Sync + 'static {
     async fn run_subscription(
         self: Arc<Self>,
         subscription: Subscription,
+        target: QueryTarget,
     ) -> Result<SubscriptionResult, SubscriptionError>;
 
     fn load_manager(&self) -> Arc<LoadManager>;

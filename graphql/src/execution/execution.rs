@@ -487,11 +487,13 @@ pub async fn execute_root_selection_set<R: Resolver>(
         let query_text = execute_ctx.query.query_text.cheap_clone();
         let variables_text = execute_ctx.query.variables_text.cheap_clone();
         match graph::spawn_blocking_allow_panic(move || {
-            Arc::new(QueryResult::from(execute_root_selection_set_uncached(
+            let mut result = QueryResult::from(execute_root_selection_set_uncached(
                 &execute_ctx,
                 &execute_selection_set,
                 &execute_root_type,
-            )))
+            ));
+            result.deployment = Some(execute_ctx.query.schema.id().clone());
+            Arc::new(result)
         })
         .await
         {

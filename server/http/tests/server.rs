@@ -4,7 +4,7 @@ use hyper::{Body, Client, Request};
 use std::collections::BTreeMap;
 use std::time::Duration;
 
-use graph::data::graphql::effort::LoadManager;
+use graph::data::{graphql::effort::LoadManager, query::QueryTarget};
 use graph::prelude::*;
 
 use graph_server_http::test_utils;
@@ -20,7 +20,7 @@ impl GraphQlRunner for TestGraphQlRunner {
     async fn run_query_with_complexity(
         self: Arc<Self>,
         _query: Query,
-        _state: DeploymentState,
+        _target: QueryTarget,
         _complexity: Option<u64>,
         _max_depth: Option<u8>,
         _max_first: Option<u32>,
@@ -33,7 +33,7 @@ impl GraphQlRunner for TestGraphQlRunner {
     async fn run_query(
         self: Arc<Self>,
         query: Query,
-        _state: DeploymentState,
+        _target: QueryTarget,
         _: bool,
     ) -> Arc<QueryResult> {
         Arc::new(QueryResult::new(vec![Arc::new(
@@ -70,6 +70,7 @@ impl GraphQlRunner for TestGraphQlRunner {
     async fn run_subscription(
         self: Arc<Self>,
         _subscription: Subscription,
+        _target: QueryTarget,
     ) -> Result<SubscriptionResult, SubscriptionError> {
         unreachable!();
     }
