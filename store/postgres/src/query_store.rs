@@ -76,4 +76,20 @@ impl QueryStoreTrait for QueryStore {
     fn wait_stats(&self) -> &PoolWaitStats {
         self.store.wait_stats(self.replica_id)
     }
+
+    fn deployment_state(&self) -> Result<DeploymentState, QueryExecutionError> {
+        Ok(self
+            .store
+            .deployment_state_from_id(self.site.deployment.clone())?)
+    }
+
+    fn api_schema(&self) -> Result<Arc<ApiSchema>, QueryExecutionError> {
+        let info = self.store.subgraph_info(&self.site.deployment)?;
+        Ok(info.api)
+    }
+
+    fn network_name(&self) -> Result<Option<String>, QueryExecutionError> {
+        let info = self.store.subgraph_info(&self.site.deployment)?;
+        Ok(info.network)
+    }
 }

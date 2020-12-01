@@ -15,8 +15,8 @@ use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 use web3::types::{Address, H256};
 
-use crate::data::subgraph::schema::*;
 use crate::data::subgraph::status;
+use crate::data::{query::QueryTarget, subgraph::schema::*};
 use crate::data::{store::*, subgraph::Source};
 use crate::prelude::*;
 use crate::util::lfu_cache::LfuCache;
@@ -1058,21 +1058,6 @@ pub trait Store: Send + Sync + 'static {
         block_hash: H256,
     ) -> Result<Option<BlockNumber>, StoreError>;
 
-    /// Get a new `QueryStore`. A `QueryStore` is tied to a DB replica, so if Graph Node is
-    /// configured to use secondary DB servers the queries will be distributed between servers.
-    ///
-    /// The query store is specific to a deployment, and `id` must indicate
-    /// which deployment will be queried. It is not possible to use the id of the
-    /// metadata subgraph, though the resulting store can be used to query
-    /// metadata about the deployment `id` (but not metadata about other deployments).
-    ///
-    /// If `for_subscription` is true, the main replica will always be used.
-    fn query_store(
-        self: Arc<Self>,
-        id: &SubgraphDeploymentId,
-        for_subscription: bool,
-    ) -> Result<Arc<dyn QueryStore + Send + Sync>, StoreError>;
-
     fn status(&self, filter: status::Filter) -> Result<Vec<status::Info>, StoreError>;
 
     /// Load the dynamic data sources for the given deployment
@@ -1093,6 +1078,23 @@ pub trait Store: Send + Sync + 'static {
         id: &SubgraphDeploymentId,
         error: SubgraphError,
     ) -> Result<(), StoreError>;
+}
+
+pub trait QueryStoreManager: Send + Sync + 'static {
+    /// Get a new `QueryStore`. A `QueryStore` is tied to a DB replica, so if Graph Node is
+    /// configured to use secondary DB servers the queries will be distributed between servers.
+    ///
+    /// The query store is specific to a deployment, and `id` must indicate
+    /// which deployment will be queried. It is not possible to use the id of the
+    /// metadata subgraph, though the resulting store can be used to query
+    /// metadata about the deployment `id` (but not metadata about other deployments).
+    ///
+    /// If `for_subscription` is true, the main replica will always be used.
+    fn query_store(
+        &self,
+        target: QueryTarget,
+        for_subscription: bool,
+    ) -> Result<Arc<dyn QueryStore + Send + Sync>, QueryExecutionError>;
 }
 
 mock! {
@@ -1237,14 +1239,6 @@ impl Store for MockStore {
         _subgraph_id: &SubgraphDeploymentId,
         _block_hash: H256,
     ) -> Result<Option<BlockNumber>, StoreError> {
-        unimplemented!()
-    }
-
-    fn query_store(
-        self: Arc<Self>,
-        _: &SubgraphDeploymentId,
-        _: bool,
-    ) -> Result<Arc<dyn QueryStore + Send + Sync>, StoreError> {
         unimplemented!()
     }
 
@@ -1394,7 +1388,7 @@ pub trait EthereumCallCache: Send + Sync + 'static {
     ) -> Result<(), Error>;
 }
 
-/// Store operations used when serving queries
+/// Store operations used when serving queries for a specific deployment
 pub trait QueryStore: Send + Sync {
     fn find_query_values(
         &self,
@@ -1417,6 +1411,14 @@ pub trait QueryStore: Send + Sync {
     ) -> Result<Option<BlockNumber>, StoreError>;
 
     fn wait_stats(&self) -> &PoolWaitStats;
+
+    /// Find the current state for the subgraph deployment `id` and
+    /// return details about it needed for executing queries
+    fn deployment_state(&self) -> Result<DeploymentState, QueryExecutionError>;
+
+    fn api_schema(&self) -> Result<Arc<ApiSchema>, QueryExecutionError>;
+
+    fn network_name(&self) -> Result<Option<String>, QueryExecutionError>;
 }
 
 /// An entity operation that can be transacted into the store; as opposed to

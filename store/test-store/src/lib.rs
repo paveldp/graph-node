@@ -7,7 +7,7 @@ use graph::components::store::EntityType;
 use graph::data::graphql::effort::LoadManager;
 use graph::data::query::QueryTarget;
 use graph::log;
-use graph::prelude::{Store as _, *};
+use graph::prelude::{QueryStoreManager as _, Store as _, *};
 use graph_graphql::prelude::{
     execute_query, Query as PreparedQuery, QueryExecutionOptions, StoreResolver,
 };
@@ -447,7 +447,7 @@ fn execute_subgraph_query_internal(
     ));
     let mut result = QueryResult::empty();
     let deployment = query.schema.id().clone();
-    let store = STORE.clone().query_store(&deployment, false).unwrap();
+    let store = STORE.clone().query_store(deployment.into(), false).unwrap();
     for (bc, selection_set) in return_err!(query.block_constraint()) {
         let logger = logger.clone();
         let resolver = return_err!(rt.block_on(StoreResolver::at_block(

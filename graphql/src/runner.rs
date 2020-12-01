@@ -9,10 +9,10 @@ use crate::subscription::execute_prepared_subscription;
 use graph::data::query::QueryTarget;
 use graph::prelude::{
     async_trait, o, CheapClone, DeploymentState, GraphQlRunner as GraphQlRunnerTrait, Logger,
-    Query, QueryExecutionError, QueryResult, Store, SubgraphDeploymentStore, Subscription,
-    SubscriptionError, SubscriptionResult,
+    Query, QueryExecutionError, QueryResult, QueryStore, Subscription, SubscriptionError,
+    SubscriptionResult,
 };
-use graph::{data::graphql::effort::LoadManager, prelude::ApiSchema};
+use graph::{components::store::QueryStoreManager, data::graphql::effort::LoadManager};
 
 use lazy_static::lazy_static;
 
@@ -66,7 +66,7 @@ lazy_static! {
 
 impl<S> GraphQlRunner<S>
 where
-    S: Store + SubgraphDeploymentStore,
+    S: QueryStoreManager,
 {
     /// Creates a new query runner.
     pub fn new(logger: &Logger, store: Arc<S>, load_manager: Arc<LoadManager>) -> Self {
@@ -84,13 +84,14 @@ where
     /// to clients to indicate that condition
     fn deployment_changed(
         &self,
+        store: &dyn QueryStore,
         state: DeploymentState,
         latest_block: u64,
     ) -> Result<(), QueryExecutionError> {
         if *GRAPHQL_ALLOW_DEPLOYMENT_CHANGE {
             return Ok(());
         }
-        let new_state = self.store.deployment_state_from_id(state.id.clone())?;
+        let new_state = store.deployment_state()?;
         assert!(new_state.reorg_count >= state.reorg_count);
         if new_state.reorg_count > state.reorg_count {
             // One or more reorgs happened; each reorg can't have gone back
@@ -105,31 +106,6 @@ where
             }
         }
         Ok(())
-    }
-
-    fn resolve_target(
-        &self,
-        target: QueryTarget,
-    ) -> Result<(Arc<ApiSchema>, Option<String>, DeploymentState), QueryExecutionError> {
-        use QueryTarget::*;
-
-        let state = match target {
-            Name(name) => self.store.deployment_state_from_name(name),
-            Deployment(id) => self.store.deployment_state_from_id(id),
-        }?;
-
-        // Test only, see c435c25decbc4ad7bbbadf8e0ced0ff2
-        #[cfg(debug_assertions)]
-        let state = INITIAL_DEPLOYMENT_STATE_FOR_TESTS
-            .lock()
-            .unwrap()
-            .clone()
-            .unwrap_or(state);
-
-        let schema = self.store.api_schema(&state.id)?;
-        let network = self.store.network_name(&state.id)?;
-
-        Ok((schema, network, state))
     }
 
     async fn execute(
@@ -151,13 +127,19 @@ where
         // while the query is running. `self.store` can not be used after this
         // point, and everything needs to go through the `store` we are
         // setting up here
-        let (schema, network, state) = self.resolve_target(target)?;
+        let store = self.store.query_store(target, false)?;
+        let state = store.deployment_state()?;
+        let network = store.network_name()?;
+        let schema = store.api_schema()?;
         let deployment = schema.id().clone();
-        let store = self
-            .store
-            .cheap_clone()
-            .query_store(&deployment, false)
-            .map_err(|e| QueryExecutionError::from(e))?;
+
+        // Test only, see c435c25decbc4ad7bbbadf8e0ced0ff2
+        #[cfg(debug_assertions)]
+        let state = INITIAL_DEPLOYMENT_STATE_FOR_TESTS
+            .lock()
+            .unwrap()
+            .clone()
+            .unwrap_or(state);
 
         let max_depth = max_depth.unwrap_or(*GRAPHQL_MAX_DEPTH);
         let query = crate::execution::Query::new(
@@ -220,7 +202,7 @@ where
         }
 
         query.log_execution(max_block);
-        self.deployment_changed(state, max_block as u64)
+        self.deployment_changed(store.as_ref(), state, max_block as u64)
             .map_err(QueryResult::from)
             .map(|()| result)
     }
@@ -229,7 +211,7 @@ where
 #[async_trait]
 impl<S> GraphQlRunnerTrait for GraphQlRunner<S>
 where
-    S: Store + SubgraphDeploymentStore,
+    S: QueryStoreManager,
 {
     async fn run_query(
         self: Arc<Self>,
@@ -277,7 +259,10 @@ where
         subscription: Subscription,
         target: QueryTarget,
     ) -> Result<SubscriptionResult, SubscriptionError> {
-        let (schema, network, _) = self.resolve_target(target)?;
+        let store = self.store.query_store(target, true)?;
+        let schema = store.api_schema()?;
+        let network = store.network_name()?;
+
         let query = crate::execution::Query::new(
             &self.logger,
             schema,
@@ -288,11 +273,6 @@ where
         )?;
 
         let deployment = query.schema.id().clone();
-        let store = self
-            .store
-            .clone()
-            .query_store(&deployment, true)
-            .map_err(|e| QueryExecutionError::from(e))?;
         if let Err(err) = self
             .load_manager
             .decide(

@@ -7,13 +7,16 @@ use graph::{
     components::store::{self, EntityType},
     constraint_violation,
     data::subgraph::schema::MetadataType,
-    data::subgraph::{schema::SubgraphError, status},
+    data::{
+        query::QueryTarget,
+        subgraph::{schema::SubgraphError, status},
+    },
     prelude::{
         lazy_static,
         web3::types::{Address, H256},
         ApiSchema, BlockNumber, DeploymentState, DynTryFuture, Entity, EntityKey,
         EntityModification, EntityQuery, Error, EthereumBlockPointer, EthereumCallCache, Logger,
-        MetadataOperation, NodeId, QueryExecutionError, QueryStore, Schema, StopwatchMetrics,
+        MetadataOperation, NodeId, QueryExecutionError, Schema, StopwatchMetrics,
         Store as StoreTrait, StoreError, StoreEvent, StoreEventStreamBox, SubgraphDeploymentEntity,
         SubgraphDeploymentId, SubgraphDeploymentStore, SubgraphName, SubgraphVersionSwitchingMode,
         SubscriptionFilter,
@@ -268,6 +271,25 @@ impl ShardedStore {
         Ok(primary::Connection::new(conn))
     }
 
+    pub(crate) fn replica_for_query(
+        &self,
+        target: QueryTarget,
+        for_subscription: bool,
+    ) -> Result<(Arc<Store>, Arc<Site>, ReplicaId), StoreError> {
+        let id = match target {
+            QueryTarget::Name(name) => {
+                let conn = self.primary_conn()?;
+                conn.transaction(|| conn.current_deployment_for_subgraph(name))?
+            }
+            QueryTarget::Deployment(id) => id,
+        };
+
+        let (store, site) = self.store(&id)?;
+        let replica = store.replica_for_query(for_subscription)?;
+
+        Ok((store.clone(), site.clone(), replica))
+    }
+
     /// Delete all entities. This function exists solely for integration tests
     /// and should never be called from any other code. Unfortunately, Rust makes
     /// it very hard to export items just for testing
@@ -465,15 +487,6 @@ impl StoreTrait for ShardedStore {
     ) -> Result<Option<BlockNumber>, StoreError> {
         let (store, _) = self.store(&id)?;
         store.block_number(id, block_hash)
-    }
-
-    fn query_store(
-        self: Arc<Self>,
-        id: &SubgraphDeploymentId,
-        for_subscription: bool,
-    ) -> Result<Arc<dyn QueryStore + Send + Sync>, StoreError> {
-        let (store, site) = self.store(&id)?;
-        store.clone().query_store(site, for_subscription)
     }
 
     fn deployment_synced(&self, id: &SubgraphDeploymentId) -> Result<(), Error> {

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use graph::{
-    components::store::{EntityType, StoredDynamicDataSource},
+    components::store::{EntityType, QueryStoreManager, StoredDynamicDataSource},
     data::subgraph::{schema::SubgraphError, status},
     prelude::{
         ethabi,
@@ -13,7 +13,7 @@ use graph::{
     },
 };
 
-use crate::{chain_store::ChainStore, ShardedStore};
+use crate::{chain_store::ChainStore, query_store::QueryStore, ShardedStore};
 
 pub struct NetworkStore {
     store: Arc<ShardedStore>,
@@ -196,14 +196,6 @@ impl StoreTrait for NetworkStore {
         self.store.block_number(subgraph_id, block_hash)
     }
 
-    fn query_store(
-        self: Arc<Self>,
-        id: &SubgraphDeploymentId,
-        for_subscription: bool,
-    ) -> Result<Arc<dyn graph::prelude::QueryStore + Send + Sync>, StoreError> {
-        self.store.cheap_clone().query_store(id, for_subscription)
-    }
-
     fn deployment_synced(&self, id: &graph::prelude::SubgraphDeploymentId) -> Result<(), Error> {
         self.store.deployment_synced(id)
     }
@@ -272,6 +264,25 @@ impl SubgraphDeploymentStore for NetworkStore {
         subgraph_id: &graph::prelude::SubgraphDeploymentId,
     ) -> Result<Option<String>, StoreError> {
         self.store.network_name(subgraph_id)
+    }
+}
+
+impl QueryStoreManager for NetworkStore {
+    fn query_store(
+        &self,
+        target: graph::data::query::QueryTarget,
+        for_subscription: bool,
+    ) -> Result<
+        Arc<dyn graph::prelude::QueryStore + Send + Sync>,
+        graph::prelude::QueryExecutionError,
+    > {
+        let (store, site, replica) = self.store.replica_for_query(target, for_subscription)?;
+        Ok(Arc::new(QueryStore::new(
+            store,
+            for_subscription,
+            site,
+            replica,
+        )))
     }
 }
 
