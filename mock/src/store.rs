@@ -204,4 +204,8 @@ impl Store for MockStore {
     ) -> Result<(), StoreError> {
         unimplemented!()
     }
+
+    fn subgraph_exists(&self, _: &SubgraphName) -> Result<bool, StoreError> {
+        unimplemented!()
+    }
 }

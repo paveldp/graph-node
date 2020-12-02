@@ -1062,6 +1062,10 @@ pub trait Store: Send + Sync + 'static {
         id: &SubgraphDeploymentId,
         error: SubgraphError,
     ) -> Result<(), StoreError>;
+
+    /// Return `true` if a subgraph `name` exists, regardless of whether the
+    /// subgraph has any deployments attached to it
+    fn subgraph_exists(&self, name: &SubgraphName) -> Result<bool, StoreError>;
 }
 
 pub trait QueryStoreManager: Send + Sync + 'static {
@@ -1238,6 +1242,10 @@ impl Store for MockStore {
         _: &SubgraphDeploymentId,
         _: SubgraphError,
     ) -> Result<(), StoreError> {
+        unimplemented!()
+    }
+
+    fn subgraph_exists(&self, _: &SubgraphName) -> Result<bool, StoreError> {
         unimplemented!()
     }
 }

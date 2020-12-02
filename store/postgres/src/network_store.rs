@@ -225,6 +225,10 @@ impl StoreTrait for NetworkStore {
     ) -> Result<(), StoreError> {
         self.store.fail_deployment(id, error)
     }
+
+    fn subgraph_exists(&self, name: &SubgraphName) -> Result<bool, StoreError> {
+        self.store.subgraph_exists(name)
+    }
 }
 
 impl SubgraphDeploymentStore for NetworkStore {
