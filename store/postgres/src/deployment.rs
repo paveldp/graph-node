@@ -15,6 +15,8 @@ use std::convert::TryFrom;
 
 use graph::constraint_violation;
 
+use crate::block_range::UNVERSIONED_RANGE;
+
 // Diesel tables for some of the metadata
 // See also: ed42d219c6704a4aab57ce1ea66698e7
 // Changes to the GraphQL schema might require changes to these tables.
@@ -427,9 +429,9 @@ pub fn fail(
                 .map(|ptr| Vec::from(ptr.hash.to_fixed_bytes()))),
             e::handler.eq(&error.handler),
             e::deterministic.eq(&error.deterministic),
+            e::block_range.eq(UNVERSIONED_RANGE),
         ))
-        .on_conflict(e::id)
-        .do_nothing()
+        .on_conflict_do_nothing()
         .execute(conn)?;
 
     update(d::table.filter(d::id.eq(id.as_str())))
