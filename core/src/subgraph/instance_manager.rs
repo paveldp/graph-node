@@ -187,7 +187,7 @@ impl SubgraphInstanceManager {
         metrics_registry: Arc<M>,
     ) -> Self
     where
-        S: Store + ChainStore + SubgraphDeploymentStore + EthereumCallCache,
+        S: Store + ChainStore + EthereumCallCache,
         B: BlockStreamBuilder,
         M: MetricsRegistry,
     {
@@ -224,7 +224,7 @@ impl SubgraphInstanceManager {
         block_stream_builder: B,
         metrics_registry: Arc<M>,
     ) where
-        S: Store + ChainStore + SubgraphDeploymentStore + EthereumCallCache,
+        S: Store + ChainStore + EthereumCallCache,
         B: BlockStreamBuilder,
         M: MetricsRegistry,
     {
@@ -298,7 +298,7 @@ impl SubgraphInstanceManager {
     ) -> Result<(), Error>
     where
         B: BlockStreamBuilder,
-        S: Store + ChainStore + SubgraphDeploymentStore + EthereumCallCache,
+        S: Store + ChainStore + EthereumCallCache,
         M: MetricsRegistry,
     {
         let required_capabilities = manifest.required_ethereum_capabilities();
@@ -431,7 +431,7 @@ async fn run_subgraph<B, T, S>(mut ctx: IndexingContext<B, T, S>) -> Result<(), 
 where
     B: BlockStreamBuilder,
     T: RuntimeHostBuilder,
-    S: ChainStore + Store + EthereumCallCache + SubgraphDeploymentStore,
+    S: ChainStore + Store + EthereumCallCache,
 {
     // Clone a few things for different parts of the async processing
     let subgraph_metrics = ctx.subgraph_metrics.cheap_clone();
@@ -606,7 +606,7 @@ async fn process_block<B: BlockStreamBuilder, T: RuntimeHostBuilder, S>(
     block: EthereumBlockWithTriggers,
 ) -> Result<(IndexingContext<B, T, S>, bool), CancelableError<BlockProcessingError>>
 where
-    S: ChainStore + Store + EthereumCallCache + SubgraphDeploymentStore,
+    S: ChainStore + Store + EthereumCallCache,
 {
     let triggers = block.triggers;
     let block = block.ethereum_block;
@@ -952,7 +952,7 @@ fn create_dynamic_data_sources<B, T: RuntimeHostBuilder, S>(
 ) -> Result<(Vec<DataSource>, Vec<Arc<T::Host>>), anyhow::Error>
 where
     B: BlockStreamBuilder,
-    S: ChainStore + Store + SubgraphDeploymentStore + EthereumCallCache,
+    S: ChainStore + Store + EthereumCallCache,
 {
     let mut data_sources = vec![];
     let mut runtime_hosts = vec![];

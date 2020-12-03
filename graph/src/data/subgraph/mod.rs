@@ -16,7 +16,7 @@ use wasmparser;
 use web3::types::{Address, H256};
 
 use crate::components::link_resolver::LinkResolver;
-use crate::components::store::{Store, StoreError, SubgraphDeploymentStore};
+use crate::components::store::{Store, StoreError};
 use crate::components::subgraph::DataSourceTemplateInfo;
 use crate::data::graphql::{TryFromValue, ValueMap};
 use crate::data::query::QueryExecutionError;
@@ -919,10 +919,7 @@ pub struct Graft {
 }
 
 impl Graft {
-    fn validate<S: Store + SubgraphDeploymentStore>(
-        &self,
-        store: Arc<S>,
-    ) -> Vec<SubgraphManifestValidationError> {
+    fn validate<S: Store>(&self, store: Arc<S>) -> Vec<SubgraphManifestValidationError> {
         fn gbi(msg: String) -> Vec<SubgraphManifestValidationError> {
             vec![SubgraphManifestValidationError::GraftBaseInvalid(msg)]
         }
@@ -993,7 +990,7 @@ impl UnvalidatedSubgraphManifest {
         ))
     }
 
-    pub fn validate<S: Store + SubgraphDeploymentStore>(
+    pub fn validate<S: Store>(
         self,
         store: Arc<S>,
     ) -> Result<

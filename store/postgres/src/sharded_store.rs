@@ -18,7 +18,7 @@ use graph::{
         EntityQuery, Error, EthereumBlockPointer, EthereumCallCache, Logger, MetadataOperation,
         NodeId, QueryExecutionError, Schema, StopwatchMetrics, Store as StoreTrait, StoreError,
         StoreEvent, StoreEventStreamBox, SubgraphDeploymentEntity, SubgraphDeploymentId,
-        SubgraphDeploymentStore, SubgraphName, SubgraphVersionSwitchingMode, SubscriptionFilter,
+        SubgraphName, SubgraphVersionSwitchingMode, SubscriptionFilter,
     },
 };
 use store::StoredDynamicDataSource;
@@ -619,10 +619,7 @@ impl StoreTrait for ShardedStore {
         let primary = self.primary_conn()?;
         primary.subgraph_exists(name)
     }
-}
 
-/// Methods similar to those for SubgraphDeploymentStore
-impl SubgraphDeploymentStore for ShardedStore {
     fn input_schema(&self, id: &SubgraphDeploymentId) -> Result<Arc<Schema>, StoreError> {
         let (store, _) = self.store(&id)?;
         let info = store.subgraph_info(id)?;

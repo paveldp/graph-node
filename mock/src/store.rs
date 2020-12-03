@@ -10,9 +10,7 @@ use web3::types::{Address, H256};
 mock! {
     pub Store {
         fn get_mock(&self, key: EntityKey) -> Result<Option<Entity>, QueryExecutionError>;
-    }
 
-    trait SubgraphDeploymentStore: Send + Sync + 'static {
         fn input_schema(&self, subgraph_id: &SubgraphDeploymentId) -> Result<Arc<Schema>, StoreError>;
 
         fn api_schema(&self, subgraph_id: &SubgraphDeploymentId) -> Result<Arc<ApiSchema>, StoreError>;
@@ -206,6 +204,18 @@ impl Store for MockStore {
     }
 
     fn subgraph_exists(&self, _: &SubgraphName) -> Result<bool, StoreError> {
+        unimplemented!()
+    }
+
+    fn input_schema(&self, _: &SubgraphDeploymentId) -> Result<Arc<Schema>, StoreError> {
+        unimplemented!()
+    }
+
+    fn api_schema(&self, _: &SubgraphDeploymentId) -> Result<Arc<ApiSchema>, StoreError> {
+        unimplemented!()
+    }
+
+    fn network_name(&self, _: &SubgraphDeploymentId) -> Result<Option<String>, StoreError> {
         unimplemented!()
     }
 }
